@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Chat</title>
+    <style>
+        #chat { height: 300px; border: 1px solid #ccc; overflow-y: auto; }
+        #message { width: 100%; }
+        #username { margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <h1>WebSocket Live Chat</h1>
+    
+    <div>
+        <label for="username">Enter your username:</label>
+        <input type="text" id="username" placeholder="Username">
+        <button onclick="setUsername()">Join Chat</button>
+    </div>
+
+    <div id="chat"></div>
+    <input type="text" id="message" placeholder="Type your message here..." disabled>
+    <button onclick="sendMessage()" disabled>Send</button>
+
+    <script>
+        const chatDiv = document.getElementById('chat');
+        const messageInput = document.getElementById('message');
+        const usernameInput = document.getElementById('username');
+        let username = '';
+        let socket;
+
+        // Set username and enable chat
+        function setUsername() {
+            username = usernameInput.value.trim();
+            if (username) {
+                socket = new WebSocket('ws://localhost:12345');
+
+                // Send the username to the server
+                socket.onopen = () => {
+                    const data = { username };
+                    socket.send(JSON.stringify(data));
+                };
+
+                socket.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    const messageElement = document.createElement('div');
+
+                    if (data.system) {
+                        // System message (join/leave announcement)
+                        messageElement.style.color = 'gray';
+                        messageElement.textContent = data.message;
+                    } else {
+                        // User message
+                        messageElement.textContent = `${data.username}: ${data.message}`;
+                    }
+
+                    chatDiv.appendChild(messageElement);
+                    chatDiv.scrollTop = chatDiv.scrollHeight;  // Auto-scroll to the bottom
+                };
+
+                // Enable message input after setting username
+                messageInput.disabled = false;
+                document.querySelector('button[onclick="sendMessage()"]').disabled = false;
+                usernameInput.disabled = true;
+                document.querySelector('button[onclick="setUsername()"]').disabled = true;
+            }
+        }
+
+        // Send message to the WebSocket server
+        function sendMessage() {
+            const message = messageInput.value;
+            if (message && username) {
+                const data = { username, message };
+                socket.send(JSON.stringify(data));
+                messageInput.value = '';  // Clear the input after sending
+            }
+        }
+    </script>
+</body>
+</html>
